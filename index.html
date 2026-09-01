@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PopDEX Trade Replay — Replay Your Trades</title>
+<meta name="description" content="Enter a public PopDEX wallet address and replay historical trades candle by candle.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="toast" class="toast" hidden></div>
+
+<!-- =========================================================
+     SCREEN 1 — HOMEPAGE
+     ========================================================= -->
+<section id="screen-home" class="screen screen--active">
+  <div class="hero">
+    <video class="hero__video" autoplay muted loop playsinline
+      poster=""
+      aria-hidden="true">
+      <source src="hero-backend.mp4" type="video/mp4">
+    </video>
+    <div class="hero__overlay"></div>
+
+    <header class="hero__nav">
+      <div class="brand">
+        <div class="brand__lockup">
+          <img class="brand__logo" src="https://raw.githubusercontent.com/rio-699/Source/main/popdex%20logo.png" alt="PopDEX">
+          <span class="brand__tagline">Trader Tool</span>
+        </div>
+      </div>
+      <button id="demo-mode-toggle" class="demo-toggle" type="button" aria-pressed="false">
+        Demo Mode
+      </button>
+    </header>
+
+    <div class="hero__content">
+      <p class="hero__eyebrow">Every trade should become a learning tool.</p>
+      <h1 class="hero__title">Replay Your PopDEX Trades</h1>
+      <p class="hero__subtitle">See exactly what happened between entry and exit.</p>
+
+      <div id="demo-banner-home" class="demo-banner" hidden>DEMO MODE — using sample trades, not live PopDEX data.</div>
+
+      <form id="wallet-form" class="wallet-form" autocomplete="off">
+        <label for="wallet-input" class="sr-only">Wallet address</label>
+        <div class="wallet-form__field">
+          <input
+            id="wallet-input"
+            type="text"
+            name="wallet"
+            placeholder="Paste wallet address"
+            spellcheck="false"
+            autocapitalize="off"
+            aria-describedby="home-error"
+          >
+          <button id="wallet-clear" class="wallet-form__clear" type="button" hidden aria-label="Clear wallet address">✕</button>
+        </div>
+        <button id="wallet-submit" class="btn btn--primary wallet-form__submit" type="submit">
+          <span class="btn__label">Find My Trades</span>
+          <span class="btn__spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+
+      <p id="home-error" class="form-error" role="alert" hidden></p>
+      <p id="home-loading" class="form-loading" role="status" hidden>Finding your trades…</p>
+    </div>
+  </div>
+
+  <section class="feature-strip" aria-label="What you can see in a replay">
+    <div class="feature-strip__item">
+      <span class="feature-strip__num">Entry → Exit</span>
+      <p>Watch price move candle by candle from the moment you opened to the moment you closed.</p>
+    </div>
+    <div class="feature-strip__item">
+      <span class="feature-strip__num">Orders & Fills</span>
+      <p>See every order and execution plotted on the chart exactly when it happened.</p>
+    </div>
+    <div class="feature-strip__item">
+      <span class="feature-strip__num">PnL, Fees & Funding</span>
+      <p>Track live PnL, fees, and funding as the replay plays, then break it down after exit.</p>
+    </div>
+    <div class="feature-strip__item">
+      <span class="feature-strip__num">Liquidation Distance</span>
+      <p>See how close the position came to liquidation throughout the trade.</p>
+    </div>
+  </section>
+</section>
+
+<!-- =========================================================
+     SCREEN 2 — TRADE HISTORY
+     ========================================================= -->
+<section id="screen-trade-list" class="screen">
+  <header class="topbar">
+    <div class="topbar__wallet">
+      <span class="topbar__label">Wallet</span>
+      <span id="trade-list-wallet" class="topbar__value">—</span>
+      <button class="btn btn--ghost btn--small wallet-change-btn" type="button" data-change-wallet>Change Wallet</button>
+    </div>
+    <nav class="tab-nav" role="tablist" aria-label="Replay Tool sections">
+      <button class="tab-nav__btn" type="button" data-tab-btn="tradeReplay" role="tab" aria-selected="true" aria-controls="screen-trade-list">Trade Replay</button>
+      <button class="tab-nav__btn" type="button" data-tab-btn="feeAnalytics" role="tab" aria-selected="false" aria-controls="screen-fee-analytics">Fee Analytics</button>
+    </nav>
+  </header>
+
+  <div class="page-inner">
+    <div class="summary-grid">
+      <div class="summary-card"><span class="summary-card__label">Total Trades</span><span id="stat-total" class="summary-card__value">0</span></div>
+      <div class="summary-card"><span class="summary-card__label">Winning Trades</span><span id="stat-wins" class="summary-card__value">0</span></div>
+      <div class="summary-card"><span class="summary-card__label">Losing Trades</span><span id="stat-losses" class="summary-card__value">0</span></div>
+      <div class="summary-card"><span class="summary-card__label">Total Volume</span><span id="stat-volume" class="summary-card__value">—</span></div>
+      <div class="summary-card"><span class="summary-card__label">Total PnL</span><span id="stat-pnl" class="summary-card__value">—</span></div>
+    </div>
+
+    <div class="list-controls">
+      <div class="filter-chips" role="group" aria-label="Filter trades">
+        <button class="filter-chip is-active" type="button" data-filter="All">All</button>
+        <button class="filter-chip" type="button" data-filter="Profitable">Profitable</button>
+        <button class="filter-chip" type="button" data-filter="Losing">Losing</button>
+        <button class="filter-chip" type="button" data-filter="Long">Long</button>
+        <button class="filter-chip" type="button" data-filter="Short">Short</button>
+      </div>
+      <label class="sort-control">
+        <span>Sort</span>
+        <select id="sort-select">
+          <option>Newest</option>
+          <option>Oldest</option>
+          <option>Highest PnL</option>
+          <option>Lowest PnL</option>
+          <option>Largest Position</option>
+          <option>Longest Trade</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="trade-list-empty" class="empty-state" hidden>
+      <h3>No completed trades found.</h3>
+      <p>We couldn't find any completed PopDEX trades for this wallet.</p>
+    </div>
+
+    <div class="trade-table">
+      <div class="trade-row trade-row--head" aria-hidden="true">
+        <div>Pair</div><div>Entry</div><div>Exit</div><div>Size</div><div>Leverage</div>
+        <div>PnL</div><div>Fees</div><div>Funding</div><div>Duration</div><div>Date</div><div></div>
+      </div>
+      <div id="trade-list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SCREEN 2b — FEE ANALYTICS
+     ========================================================= -->
+<section id="screen-fee-analytics" class="screen">
+  <header class="topbar">
+    <div class="topbar__wallet">
+      <span class="topbar__label">Wallet</span>
+      <span id="fee-analytics-wallet" class="topbar__value">—</span>
+      <button class="btn btn--ghost btn--small wallet-change-btn" type="button" data-change-wallet>Change Wallet</button>
+    </div>
+    <nav class="tab-nav" role="tablist" aria-label="Replay Tool sections">
+      <button class="tab-nav__btn" type="button" data-tab-btn="tradeReplay" role="tab" aria-selected="false" aria-controls="screen-trade-list">Trade Replay</button>
+      <button class="tab-nav__btn" type="button" data-tab-btn="feeAnalytics" role="tab" aria-selected="true" aria-controls="screen-fee-analytics">Fee Analytics</button>
+    </nav>
+  </header>
+
+  <div class="page-inner">
+
+    <div id="fa-empty" class="empty-state" hidden>
+      <h3>No trading data yet.</h3>
+      <p>Fee and rewards analytics will appear here once this wallet has completed trades.</p>
+    </div>
+
+    <div id="fa-content" hidden>
+
+      <div class="fa-section">
+        <div class="fa-section__head">
+          <h2 class="fa-section__title">Date Range</h2>
+          <div class="fa-range" id="fa-range-controls" role="group" aria-label="Fee analytics date range">
+            <button class="filter-chip is-active" type="button" data-range="all">All Time</button>
+            <button class="filter-chip" type="button" data-range="90d">Last 90 Days</button>
+            <button class="filter-chip" type="button" data-range="30d">Last 30 Days</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Fees Paid -->
+      <div class="fa-section">
+        <div class="panel fa-hero">
+          <span class="fa-hero__label">Total Fees Paid</span>
+          <span id="fa-total-fees" class="fa-hero__value">—</span>
+          <span id="fa-total-fees-delta" class="fa-hero__delta" hidden></span>
+          <span id="fa-total-fees-range" class="fa-hero__range"></span>
+        </div>
+      </div>
+
+      <!-- Maker/Taker + Funding -->
+      <div class="fa-section">
+        <div class="fa-grid-2">
+          <div class="panel">
+            <h2 class="panel__title">Maker vs Taker Fee Split</h2>
+            <div class="fa-split-numbers">
+              <div class="fa-split-col fa-split-col--maker">
+                <span class="fa-split-col__label">Maker Fees</span>
+                <span id="fa-maker-value" class="fa-split-col__value">—</span>
+                <span id="fa-maker-pct" class="fa-split-col__pct"></span>
+              </div>
+              <div class="fa-split-col fa-split-col--taker">
+                <span class="fa-split-col__label">Taker Fees</span>
+                <span id="fa-taker-value" class="fa-split-col__value">—</span>
+                <span id="fa-taker-pct" class="fa-split-col__pct"></span>
+              </div>
+            </div>
+            <div class="fa-split-bar" id="fa-split-bar" hidden>
+              <div class="fa-split-bar__seg fa-split-bar__seg--maker" id="fa-split-bar-maker"></div>
+              <div class="fa-split-bar__seg fa-split-bar__seg--taker" id="fa-split-bar-taker"></div>
+            </div>
+            <p id="fa-split-note" class="fa-empty-note"></p>
+          </div>
+
+          <div class="panel">
+            <h2 class="panel__title">Funding Fees</h2>
+            <div class="fa-funding-rows">
+              <div class="fa-funding-row">
+                <span class="fa-funding-row__label">Funding Paid</span>
+                <span id="fa-funding-paid" class="fa-funding-row__value">—</span>
+              </div>
+              <div class="fa-funding-row">
+                <span class="fa-funding-row__label">Funding Received</span>
+                <span id="fa-funding-received" class="fa-funding-row__value">—</span>
+              </div>
+              <div class="fa-funding-row fa-funding-row--net">
+                <span class="fa-funding-row__label">Net Funding</span>
+                <span id="fa-funding-net" class="fa-funding-row__value">—</span>
+              </div>
+            </div>
+            <p id="fa-funding-note" class="fa-empty-note"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fee Trend -->
+      <div class="fa-section">
+        <div class="panel">
+          <div class="fa-section__head">
+            <h2 class="panel__title" style="margin:0;">Fee Trend</h2>
+            <div class="fa-trend-controls" id="fa-trend-controls" role="group" aria-label="Fee trend timeframe">
+              <button class="filter-chip" type="button" data-trend="daily">Daily</button>
+              <button class="filter-chip is-active" type="button" data-trend="weekly">Weekly</button>
+              <button class="filter-chip" type="button" data-trend="monthly">Monthly</button>
+            </div>
+          </div>
+          <div class="fa-trend-chart-wrap">
+            <div id="fa-trend-chart" class="fa-trend-chart"></div>
+            <div id="fa-trend-tooltip" class="fa-trend-tooltip" hidden></div>
+          </div>
+          <div id="fa-trend-empty" class="empty-inline" hidden>Not enough data to chart a trend yet.</div>
+        </div>
+      </div>
+
+      <!-- Fees vs Rewards -->
+      <div class="fa-section">
+        <div class="panel fa-rewards">
+          <h2 class="panel__title">Fees vs Rewards</h2>
+          <div class="fa-rewards__cols">
+            <div class="fa-rewards__col fa-rewards__col--fees">
+              <span class="fa-rewards__col-label">Fees Paid</span>
+              <span id="fa-rewards-fees" class="fa-rewards__col-value">—</span>
+            </div>
+            <div class="fa-rewards__divider">vs</div>
+            <div class="fa-rewards__col fa-rewards__col--rewards">
+              <span class="fa-rewards__col-label">Rewards Received</span>
+              <span id="fa-rewards-received" class="fa-rewards__col-value">—</span>
+            </div>
+          </div>
+          <div id="fa-rewards-net" class="fa-rewards__net">—</div>
+          <div class="fa-rewards__net-label">Net Value</div>
+          <div id="fa-rewards-badge" class="fa-rewards__badge fa-rewards__badge--neutral">—</div>
+          <div id="fa-rewards-ratio" class="fa-rewards__ratio"></div>
+          <p id="fa-rewards-note" class="fa-rewards__note"></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SCREEN 3 — REPLAY TERMINAL
+     ========================================================= -->
+<section id="screen-replay" class="screen">
+  <header class="topbar">
+    <button id="back-to-list" class="btn btn--ghost" type="button">← Trade List</button>
+    <div class="topbar__wallet">
+      <span id="replay-pair" class="topbar__value topbar__value--strong">—</span>
+      <span id="replay-side" class="side-badge">—</span>
+    </div>
+    <div class="clip-download">
+      <button id="download-clip" class="btn btn--outline btn--small" type="button">
+        Download Clip
+      </button>
+    </div>
+    <button id="share-replay" class="btn btn--outline btn--small" type="button">Share Replay</button>
+  </header>
+
+  <p id="replay-fatal-error" class="form-error form-error--block" role="alert" hidden></p>
+
+  <div id="replay-body" class="replay-body" hidden>
+
+    <div class="replay-grid">
+      <!-- Trade info -->
+      <aside class="panel replay-info" aria-label="Trade info">
+        <h2 class="panel__title">Trade Info</h2>
+        <div id="entry-banner" class="event-banner event-banner--entry" hidden>
+          <span class="event-banner__tag">ENTRY</span>
+          <span id="entry-banner-price" class="event-banner__price">—</span>
+          <span id="entry-banner-side" class="event-banner__meta">—</span>
+        </div>
+        <div id="exit-banner" class="event-banner event-banner--exit" hidden>
+          <span class="event-banner__tag">EXIT</span>
+          <span id="exit-banner-price" class="event-banner__price">—</span>
+        </div>
+        <div class="mini-panel">
+          <h3 class="mini-panel__title">Orders</h3>
+          <div id="orders-panel" class="mini-panel__body"></div>
+        </div>
+        <div class="mini-panel">
+          <h3 class="mini-panel__title">Executions</h3>
+          <div id="executions-panel" class="mini-panel__body"></div>
+        </div>
+      </aside>
+
+      <!-- Chart -->
+      <div class="panel replay-chart">
+        <div class="replay-chart__header">
+          <div class="replay-chart__timestamp" id="replay-timestamp">—</div>
+          <label class="timeframe-select">
+            <span>Candles</span>
+            <select id="chart-timeframe">
+              <option value="auto" selected>Auto</option>
+              <option value="1m">1m</option>
+              <option value="5m">5m</option>
+              <option value="15m">15m</option>
+              <option value="30m">30m</option>
+              <option value="1h">1h</option>
+              <option value="4h">4h</option>
+              <option value="1d">1D</option>
+            </select>
+            <span id="chart-timeframe-resolved" class="timeframe-select__resolved"></span>
+          </label>
+        </div>
+        <div id="chart-container" class="chart-container" role="img" aria-label="Candlestick price chart for this trade"></div>
+        <div id="chart-context-menu" class="chart-context-menu" role="menu" hidden>
+          <button id="chart-context-reset" class="chart-context-menu__item" type="button" role="menuitem">Reset Chart</button>
+        </div>
+        <div id="chart-processing" class="chart-processing" hidden>
+          <div class="spinner spinner--small" aria-hidden="true"></div>
+          <span id="chart-processing-text">Loading historical position…</span>
+        </div>
+      </div>
+
+      <!-- Live metrics -->
+      <aside class="panel replay-metrics" aria-label="Live metrics">
+        <h2 class="panel__title">Live Metrics</h2>
+        <dl class="metrics-list">
+          <div class="metrics-list__row"><dt>Pair</dt><dd id="m-pair">—</dd></div>
+          <div class="metrics-list__row"><dt>Side</dt><dd id="m-side">—</dd></div>
+          <div class="metrics-list__row"><dt>Leverage</dt><dd id="m-leverage">—</dd></div>
+          <div class="metrics-list__row"><dt>Entry</dt><dd id="m-entry">—</dd></div>
+          <div class="metrics-list__row metrics-list__row--highlight"><dt>Current</dt><dd id="m-current">—</dd></div>
+          <div class="metrics-list__row"><dt>Exit</dt><dd id="m-exit">—</dd></div>
+          <div class="metrics-list__row"><dt>Position Size</dt><dd id="m-size">—</dd></div>
+          <div class="metrics-list__row metrics-list__row--highlight"><dt>Current PnL</dt><dd id="m-pnl">—</dd></div>
+          <div class="metrics-list__row"><dt>Fees</dt><dd id="m-fees">—</dd></div>
+          <div class="metrics-list__row"><dt>Funding</dt><dd id="m-funding">—</dd></div>
+          <div class="metrics-list__row metrics-list__row--highlight"><dt>Net PnL</dt><dd id="m-net-pnl">—</dd></div>
+          <div class="metrics-list__row"><dt>Liquidation</dt><dd id="m-liquidation">—</dd></div>
+          <div class="metrics-list__row"><dt>Liquidation Distance</dt><dd id="m-liq-distance">—</dd></div>
+          <div class="metrics-list__row"><dt>Time in Trade</dt><dd id="m-time-in-trade">—</dd></div>
+        </dl>
+      </aside>
+    </div>
+
+    <!-- Replay controls -->
+    <section class="panel replay-controls" aria-label="Replay controls">
+      <div class="replay-controls__transport">
+        <button id="replay-prev" class="icon-btn" type="button" aria-label="Previous event">⏮</button>
+        <button id="replay-play" class="btn btn--primary btn--small" type="button" aria-label="Play replay">Play</button>
+        <button id="replay-restart" class="icon-btn" type="button" aria-label="Restart replay">↺</button>
+        <button id="replay-next" class="icon-btn" type="button" aria-label="Next event">⏭</button>
+      </div>
+      <input id="replay-seek" class="replay-controls__seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek replay">
+      <div class="replay-controls__speed" role="group" aria-label="Replay speed">
+        <button class="speed-btn" type="button" data-speed="0.1">0.1x</button>
+        <button class="speed-btn" type="button" data-speed="0.25">0.25x</button>
+        <button class="speed-btn" type="button" data-speed="0.5">0.5x</button>
+        <button class="speed-btn is-active" type="button" data-speed="1">1x</button>
+        <button class="speed-btn" type="button" data-speed="2">2x</button>
+        <button class="speed-btn" type="button" data-speed="3">3x</button>
+        <button class="speed-btn" type="button" data-speed="5">5x</button>
+        <button class="speed-btn" type="button" data-speed="10">10x</button>
+        <button class="speed-btn" type="button" data-speed="25">25x</button>
+        <button class="speed-btn" type="button" data-speed="50">50x</button>
+        <button class="speed-btn" type="button" data-speed="75">75x</button>
+        <button class="speed-btn" type="button" data-speed="100">100x</button>
+        <label class="speed-custom">
+          <span>Custom</span>
+          <input id="speed-custom" type="number" min="0.1" max="100" step="0.1" placeholder="x">
+        </label>
+      </div>
+    </section>
+
+    <!-- Event timeline -->
+    <section class="panel replay-timeline" aria-label="Event timeline">
+      <h2 class="panel__title">Event Timeline</h2>
+      <div id="event-timeline" class="timeline-track"></div>
+    </section>
+
+    <!-- Trade analysis -->
+    <section id="trade-analysis" class="panel trade-analysis" aria-label="Trade analysis" hidden>
+      <h2 class="panel__title">Trade Analysis</h2>
+      <div id="trade-analysis-grid" class="analysis-grid"></div>
+      <div class="insights">
+        <h3 class="insights__title">Learning Insights</h3>
+        <ul id="learning-insights" class="insights__list"></ul>
+      </div>
+    </section>
+  </div>
+</section>
+
+<script src="js/vendor/lightweight-charts.standalone.production.js"></script>
+<script src="js/vendor/html2canvas.min.js"></script>
+<script src="js/api.js"></script>
+<script src="js/core.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/app.js"></script>
+<script src="js/fees.js"></script>
+</body>
+</html>
